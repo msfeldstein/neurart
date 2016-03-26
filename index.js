@@ -3,7 +3,7 @@ require('./whammy')
 require('./ccapture')
 // window.R = R
 // require('./recurrent')
-var height = 360
+var height = 480
 var width = 360
 
 var networkSize = 16
@@ -13,7 +13,8 @@ var nOut = 3
 var mu = 0.5
 var std = 1.4
 
-var dimensions = 3
+var dimensions = 4
+var period = 260 // loop N frames
 
 var G = new R.Graph(false)
 
@@ -32,12 +33,16 @@ var initModel = function() {
 var model = initModel()
 console.log(model)
 
-var forwardNetwork = function(G, model, x_, y_, z_) {
+var forwardNetwork = function(G, model, x_, y_, t) {
+  var t = frame / period
+  var z_ = Math.sin(t * Math.PI * 2)
+  var w_ = Math.cos(t * Math.PI * 2)
   var x = new R.Mat(dimensions  + 1, 1)
   x.set(0, 0, x_)
   x.set(1, 0, y_)
   x.set(2, 0, z_)
-  x.set(3, 0, 1.0)
+  x.set(3, 0, w_)
+  x.set(4, 0, 1.0)
   
   var out = G.tanh(G.mul(model.w_in, x))
   for (var i = 0; i < nHidden; i++) {
@@ -68,7 +73,7 @@ function draw() {
   var z = frame / 200.0
   for (var x = 0; x < width; x++) {
     for (var y = 0; y < height; y++) {
-      var rgb = getColorAt(x / width, y / height, z)
+      var rgb = getColorAt(x / width, y / height, frame)
       var pix = ctx.createImageData(1, 1)
       var d = pix.data
       d[0] = rgb[0]
@@ -81,10 +86,13 @@ function draw() {
   frame++
 
   capturer.capture(canvas)
-  if (frame % 50 == 0) {
+  if (frame >= period) {
+    capturer.stop()
     capturer.save()
+  } else {
+    requestAnimationFrame(draw)
   }
-  requestAnimationFrame(draw)
+  
 }
 
 draw()
